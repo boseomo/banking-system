@@ -18,3 +18,11 @@ A simple **Banking System Application** created with **Python** and **Tkinter**.
 2. Clone this repository:
 3. Run the program:
 
+
+## Screenshots
+![Banking System Screenshot](images/banking.png)
+
+## Author
+Dorcas (boseomo)
+
+
