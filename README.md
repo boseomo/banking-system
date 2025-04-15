@@ -16,3 +16,5 @@ A simple **Banking System Application** created with **Python** and **Tkinter**.
 ## How to Run
 1. Install Python on your computer.
 2. Clone this repository:
+3. Run the program:
+
