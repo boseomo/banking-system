@@ -26,3 +26,4 @@ A simple **Banking System Application** created with **Python** and **Tkinter**.
 Dorcas (boseomo)
 
 
+![Banking System](https://github.com/user-attachments/assets/68696907-e3c4-4bb1-a341-118945d25ac2)
