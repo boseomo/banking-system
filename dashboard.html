@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { display: flex; height: 100vh; background-color: #2c3e50; }
+    .sidebar {
+      width: 240px;
+      background-color: #2d3436;
+      color: white;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .sidebar h2 { text-align: center; margin-bottom: 2rem; }
+    .sidebar button {
+      color: white;
+      background-color: #636e72;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      text-align: center;
+      border: none;
+      cursor: pointer;
+    }
+    .sidebar button:hover { background-color: #00b894; }
+    .main {
+      flex-grow: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      background-color: #ecf0f1;
+    }
+    .card {
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+    }
+    .card h3 { margin-bottom: 1rem; }
+    .form-section input, select, button {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .hidden { display: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th { background-color: #b11b1b; }
+    .filter-bar {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 10px;
+    }
+    .filter-bar input, .filter-bar select {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>BankApp</h2>
+    <button onclick="loadSection('createAccount')">Create Account</button>
+    <button onclick="loadSection('deposit')">Deposit</button>
+    <button onclick="loadSection('withdraw')">Withdraw</button>
+    <button onclick="loadSection('loan')">Loan</button>
+    <button onclick="loadSection('transactions')">Transactions</button>
+    <button onclick="loadSection('statement')">Statement</button>
+    <button onclick="loadSection('report')">Report</button>
+  </div>
+  <div class="main">
+    <div id="content">
+      <div class="card">
+        <h3>Welcome to the Bank Dashboard</h3>
+        <p>Select an action from the sidebar to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function loadSection(section) {
+      let html = '';
+      switch (section) {
+        case 'createAccount':
+          const accountId = 'AC' + Date.now().toString().slice(-6);
+          html = `
+            <div class="card">
+              <h3>Create New Account</h3>
+              <div class="form-section">
+                <input type="text" id="acc-number" placeholder="Account ID" value="${accountId}" readonly />
+                <input type="text" id="acc-name" placeholder="Name" required />
+                <select id="acc-type">
+                  <option value="Savings">Savings</option>
+                  <option value="Current">Current</option>
+                </select>
+                <input type="number" id="acc-deposit" placeholder="Initial Deposit" required />
+                <button onclick="submitCreateAccount()">Submit</button>
+                <div id="acc-result"></div>
+              </div>
+            </div>`;
+          break;
+        case 'deposit':
+          html = `
+            <div class="card">
+              <h3>Deposit</h3>
+              <div class="form-section">
+                <input type="text" id="dep-account" placeholder="Account ID" required />
+                <input type="number" id="dep-amount" placeholder="Amount" required />
+                <button onclick="submitDeposit()">Deposit</button>
+                <div id="dep-result"></div>
+              </div>
+            </div>`;
+          break;
+        case 'withdraw':
+          html = `
+            <div class="card">
+              <h3>Withdraw</h3>
+              <div class="form-section">
+                <input type="text" id="with-account" placeholder="Account ID" required />
+                <input type="number" id="with-amount" placeholder="Amount" required />
+                <button onclick="submitWithdraw()">Withdraw</button>
+                <div id="with-result"></div>
+              </div>
+            </div>`;
+          break;
+        case 'loan':
+          html = `
+            <div class="card">
+              <h3>Apply for Loan</h3>
+              <div class="form-section">
+                <input type="text" id="loan-account" placeholder="Account ID" required />
+                <input type="number" id="loan-amount" placeholder="Loan Amount" required />
+                <button onclick="submitLoan()">Apply</button>
+                <div id="loan-result"></div>
+              </div>
+            </div>`;
+          break;
+        case 'transactions':
+        case 'statement':
+        case 'report':
+          html = `
+            <div class="card">
+              <h3>${section.charAt(0).toUpperCase() + section.slice(1)} Records</h3>
+              <div class="filter-bar">
+                <input type="text" id="${section}-filter" placeholder="Search..." oninput="filterTable('${section}')">
+              </div>
+              <canvas id="${section}-chart" style="max-height:300px; display:${section === 'report' ? 'block' : 'none'}"></canvas>
+              <div id="${section}-result">Loading...</div>
+            </div>`;
+          fetch(`/${section}`)
+            .then(res => res.json())
+            .then(data => {
+              const resultDiv = document.getElementById(`${section}-result`);
+              if (Array.isArray(data) && data.length > 0) {
+                let table = `<table id="${section}-table"><thead><tr>`;
+                Object.keys(data[0]).forEach(key => table += `<th>${key}</th>`);
+                table += '</tr></thead><tbody>';
+                data.forEach(row => {
+                  table += '<tr>' + Object.values(row).map(val => `<td>${val}</td>`).join('') + '</tr>';
+                });
+                table += '</tbody></table>';
+                resultDiv.innerHTML = table;
+
+                if (section === 'report') {
+                  const labels = data.map(d => d.date || d.label || '');
+                  const values = data.map(d => d.amount || d.value || 0);
+                  const ctx = document.getElementById(`${section}-chart`).getContext('2d');
+                  new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                      labels,
+                      datasets: [{
+                        label: 'Amount',
+                        data: values,
+                        backgroundColor: 'rgba(46, 204, 113, 0.6)',
+                      }]
+                    },
+                    options: { responsive: true }
+                  });
+                }
+              } else {
+                resultDiv.textContent = 'No records found.';
+              }
+            })
+            .catch(err => {
+              document.getElementById(`${section}-result`).textContent = `❌ Error loading ${section}: ` + err.message;
+            });
+          break;
+      }
+      document.getElementById('content').innerHTML = html;
+    }
+
+    function filterTable(section) {
+      const input = document.getElementById(`${section}-filter`).value.toLowerCase();
+      const table = document.getElementById(`${section}-table`);
+      if (!table) return;
+      const rows = table.getElementsByTagName('tr');
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        let match = false;
+        for (let j = 0; j < cells.length; j++) {
+          if (cells[j].innerText.toLowerCase().includes(input)) {
+            match = true;
+            break;
+          }
+        }
+        row.style.display = match ? '' : 'none';
+      }
+    }
+
+    async function submitCreateAccount() {
+      const acc = document.getElementById('acc-number').value;
+      const name = document.getElementById('acc-name').value;
+      const type = document.getElementById('acc-type').value;
+      const initialDeposit = parseFloat(document.getElementById('acc-deposit').value);
+      const res = await fetch('/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: acc, name, type, initialDeposit })
+      });
+      const data = await res.json();
+      document.getElementById('acc-result').textContent = data.success ? '✅ Account created!' : `❌ ${data.error}`;
+    }
+
+    async function submitDeposit() {
+      const acc = document.getElementById('dep-account').value;
+      const amount = document.getElementById('dep-amount').value;
+      const res = await fetch('/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: acc, amount })
+      });
+      const data = await res.json();
+      document.getElementById('dep-result').textContent = data.success ? '✅ Deposit successful!' : `❌ ${data.error}`;
+    }
+
+    async function submitWithdraw() {
+      const acc = document.getElementById('with-account').value;
+      const amount = document.getElementById('with-amount').value;
+      const res = await fetch('/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: acc, amount })
+      });
+      const data = await res.json();
+      document.getElementById('with-result').textContent = data.success ? '✅ Withdrawal successful!' : `❌ ${data.error}`;
+    }
+
+    async function submitLoan() {
+      const acc = document.getElementById('loan-account').value;
+      const amount = document.getElementById('loan-amount').value;
+      const res = await fetch('/loan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: acc, amount })
+      });
+      const data = await res.json();
+      document.getElementById('loan-result').textContent = data.success ? '✅ Loan request submitted!' : `❌ ${data.error}`;
+    }
+  </script>
+</body>
+</html>
