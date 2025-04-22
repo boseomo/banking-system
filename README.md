@@ -20,7 +20,7 @@ A simple **Banking System Application** created with **Python** and **Tkinter**.
 
 
 ## Screenshots
-![Banking System Screenshot](images/banking.png)
+![Banking System Screenshot](images/banking-system.png)
 
 ## Author
 Dorcas (boseomo)
